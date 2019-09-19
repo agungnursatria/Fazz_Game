@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:fazz_game/page/maze/data.dart';
 
 class MazeView extends StatelessWidget {
-  // Tambahkan parameter yang diperlukan untuk menampilkan view" dibawah
-  // Gunakan bloc state untuk mendapatkan/merubah value yang ada
   final int currentIndexPosition;
   final finishIndexPosition;
   final double canvasSize;
@@ -12,6 +10,8 @@ class MazeView extends StatelessWidget {
   final bool isInitial;
   final bool isRunning;
   final bool isFinished;
+  final VoidCallback onTryAgain;
+  final Function onMove;
 
   MazeView({
     @required this.finishIndexPosition,
@@ -21,20 +21,64 @@ class MazeView extends StatelessWidget {
     this.isInitial = false,
     this.isFinished = false,
     this.isRunning = false,
+    @required this.onTryAgain,
+    @required this.onMove,
   });
 
   @override
   Widget build(BuildContext context) {
-    /* 
-    ----- TODO: Gunakan BLOC State untuk menampilkan view dengan ketentuan
-
-    - Disaat halaman baru terbuka, Tampilkan mazegameloadingview
-    - Disaat game berjalan, tampilkan MazeGameArenaView
-    - Disaat game berakhir, tampilkan MazeGameFinishedView
-
-    Lengkapi semua fungsi dan data yg ada
-
-    */
+    if (isInitial) {
+      return Center(
+        child: Container(
+          height: 60,
+          width: 60,
+          child: CircularProgressIndicator(),
+        ),
+      );
+    } else if (isRunning) {
+      return MazeGameArenaView(
+        canvasSize: canvasSize,
+        currentPosition: currentIndexPosition,
+        finishPosition: finishIndexPosition,
+        onBackward: () {
+          onMove(
+            currentIndexPosition,
+            sliceNumber,
+            blockedDirections[currentIndexPosition],
+            Direction.Left,
+          );
+        },
+        onDownward: () {
+          onMove(
+            currentIndexPosition,
+            sliceNumber,
+            blockedDirections[currentIndexPosition],
+            Direction.Bottom,
+          );
+        },
+        onForward: () {
+          onMove(
+            currentIndexPosition,
+            sliceNumber,
+            blockedDirections[currentIndexPosition],
+            Direction.Right,
+          );
+        },
+        onUpward: () {
+          onMove(
+            currentIndexPosition,
+            sliceNumber,
+            blockedDirections[currentIndexPosition],
+            Direction.Top,
+          );
+        },
+      );
+    } else if (isFinished) {
+      return MazeGameFinishedView(
+        onTryAgain: onTryAgain,
+        step: numberOfStep,
+      );
+    }
   }
 }
 
@@ -82,14 +126,10 @@ class MazeGameArenaView extends StatelessWidget {
   double canvasSize = 0;
   int currentPosition;
   int finishPosition;
-  VoidCallback
-      onBackward; //TODO: Buat fungsi untuk memindahkan posisi player kesamping kiri, manfaatkan bloc dispatch untuk perubahan
-  VoidCallback
-      onForward; //TODO: Buat fungsi untuk memindahkan posisi player kesamping kanan, manfaatkan bloc dispatch untuk perubahan
-  VoidCallback
-      onUpward; //TODO: Buat fungsi untuk memindahkan posisi player kesamping atas, manfaatkan bloc dispatch untuk perubahan
-  VoidCallback
-      onDownward; //TODO: Buat fungsi untuk memindahkan posisi player kesamping bawah, manfaatkan bloc dispatch untuk perubahan
+  VoidCallback onBackward;
+  VoidCallback onForward;
+  VoidCallback onUpward;
+  VoidCallback onDownward;
 
   MazeGameArenaView({
     @required this.canvasSize,
@@ -217,26 +257,43 @@ class MazeBlock extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    /* 
-    ---- TODO: DRAW MAZE BLOCK AREA
-    
-    Diketahui terdapat area berukuran 'areaSize',
-    Buatlah sebuah area berbentuk persegi dengan ukuran areaSize x areaSize.
-    Jika area ini adalah area tempat player berada, gambarkan lingkaran bulat berwarna merah ditengah area dengan radius 1/10 dari panjang area.
-    Jika area ini adalah area finish, warnai latar area dengan warna oranye
-    
-    Untuk setiap blockedDirection, gambarkan Garis hitam penghalang jalan
-    cth: 
-    arah kiri dan bawah diblokir, maka tampilan area
-    
-    |     
-    |     
-    |_____
+    final p1 = Offset(0, 0);
+    final p2 = Offset(0, areaSize);
+    final p3 = Offset(areaSize, areaSize);
+    final p4 = Offset(areaSize, 0);
+    final paint = Paint()
+      ..color = Colors.black
+      ..strokeWidth = 4;
 
-    
-    Jika anda merasa soal ini tidak berguna bagi anda, DM untuk minta jawaban
+    if (isFinishPlace) {
+      final rectPain = Paint()..color = Colors.amber;
+      canvas.drawRect(Rect.fromLTRB(0, 0, areaSize, areaSize), rectPain);
+    }
 
-    */
+    if (blockedDirection.contains(Direction.Left)) {
+      canvas.drawLine(p1, p2, paint);
+    }
+
+    if (blockedDirection.contains(Direction.Bottom)) {
+      canvas.drawLine(p2, p3, paint);
+    }
+
+    if (blockedDirection.contains(Direction.Right)) {
+      canvas.drawLine(p3, p4, paint);
+    }
+
+    if (blockedDirection.contains(Direction.Top)) {
+      canvas.drawLine(p4, p1, paint);
+    }
+
+    if (isCurrentPosition) {
+      final circleOffset = Offset(areaSize / 2, areaSize / 2);
+      final circleRadius = areaSize / 10;
+      final circlePaint = Paint()
+        ..color = Colors.red
+        ..strokeWidth = 4;
+      canvas.drawCircle(circleOffset, circleRadius, circlePaint);
+    }
   }
 
   @override

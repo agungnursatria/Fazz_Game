@@ -25,7 +25,7 @@ class _MazeState extends State<Maze> {
   void initState() {
     super.initState();
     mazeBloc = MazeBloc();
-    // TODO: Jalankan Game maze
+    mazeBloc.dispatch(StartGame());
 
     WidgetsBinding.instance.addPostFrameCallback((_) => onPostFrame());
   }
@@ -44,6 +44,24 @@ class _MazeState extends State<Maze> {
     super.dispose();
   }
 
+  onTryAgain() {
+    mazeBloc.dispatch(StartGame());
+  }
+
+  onMove(
+    int currentPosition,
+    int rowNumber,
+    List<Direction> blockedDirection,
+    Direction targetDirection,
+  ) {
+    mazeBloc.dispatch(Move(
+      blockedDirection: blockedDirection,
+      currentPosition: currentPosition,
+      rowNumber: rowNumber,
+      targetDirection: targetDirection,
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -54,21 +72,27 @@ class _MazeState extends State<Maze> {
       body: BlocListener(
         bloc: mazeBloc,
         listener: (BuildContext context, MazeState state) {
-          // TODO: Tampilkan error atau warning ketika user ingin berpindah ke arah yg di blokade
+          if (state is MazeRunning && state.errorMessage.isNotEmpty) {
+            final snackBar = SnackBar(content: Text(state.errorMessage));
+            Scaffold.of(context).showSnackBar(snackBar);
+            mazeBloc.dispatch(ClearErrorMessage());
+          }
         },
         child: BlocBuilder(
           bloc: mazeBloc,
           builder: (BuildContext context, MazeState state) {
-            //TODO: Perbaiki data yg dilempar
-
             return MazeView(
               canvasSize: canvasSize,
-              currentIndexPosition: -1,
-              finishIndexPosition: -1,
-              numberOfStep: -1,
-              isFinished: false,
-              isRunning: false,
-              isInitial: false,
+              currentIndexPosition:
+                  (state is MazeRunning) ? state.currentIndexPosition : -1,
+              finishIndexPosition:
+                  (state is MazeRunning) ? state.finishIndexPosition : -1,
+              numberOfStep: (state is MazeFinished) ? state.finalStep : -1,
+              onMove: onMove,
+              onTryAgain: onTryAgain,
+              isFinished: state is MazeFinished,
+              isRunning: state is MazeRunning,
+              isInitial: state is MazeInitial,
             );
           },
         ),
